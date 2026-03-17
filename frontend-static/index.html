@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Ocean Plastic Monitoring - Bay of Bengal</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="panel left-panel">
+        <h2>Plastic Density</h2>
+        <div class="metric">Density Score: <span id="densityScore">0.00</span></div>
+        <div class="metric">Cluster Count: <span id="clusterCount">0</span></div>
+        <div class="metric">Selected Lat: <span id="selectedLat">15.0000</span></div>
+        <div class="metric">Selected Lon: <span id="selectedLon">90.0000</span></div>
+      </aside>
+
+      <main class="map-panel">
+        <div class="controls">
+          <label>
+            Image Input
+            <input id="imageInput" type="file" accept="image/*" />
+          </label>
+          <button id="analyzeBtn">Analyze</button>
+          <span id="status">Idle</span>
+        </div>
+        <div id="map"></div>
+      </main>
+
+      <aside class="panel right-panel">
+        <h2>Wind Data</h2>
+        <div class="metric">Speed: <span id="windSpeed">-</span> m/s</div>
+        <div class="metric">Direction: <span id="windDirection">-</span>°</div>
+        <div class="metric">Source: <span id="windSource">-</span></div>
+      </aside>
+    </div>
+
+    <footer class="bottom-panel">
+      <div>Current: <span id="currentCoord">15.0000, 90.0000</span></div>
+      <div>Predicted (+120 min): <span id="predictedCoord">-</span></div>
+      <div>Ocean Current (u,v): <span id="uvComponents">-</span></div>
+      <div>Current Source: <span id="currentSource">-</span></div>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
