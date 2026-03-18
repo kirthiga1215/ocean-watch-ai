@@ -1,6 +1,9 @@
 import { Activity, Layers } from "lucide-react";
+import { useDatasetDashboard } from "@/hooks/useDatasetDashboard";
 
 const LeftPanel = () => {
+  const { data } = useDatasetDashboard();
+
   return (
     <div className="glass-card glow-border p-5 w-64 flex flex-col gap-5 animate-fade-in">
       <h2 className="text-xs font-semibold tracking-widest uppercase text-primary">
@@ -36,7 +39,7 @@ const LeftPanel = () => {
               Cluster Count
             </p>
             <p className="text-lg font-semibold font-mono text-foreground">
-              24
+              {data?.summary.cluster_count ?? "-"}
             </p>
           </div>
         </div>
@@ -50,7 +53,7 @@ const LeftPanel = () => {
               Density Level
             </p>
             <p className="text-lg font-semibold text-heat-medium font-mono">
-              Moderate
+              {data?.summary.density_level ?? "-"}
             </p>
           </div>
         </div>
@@ -58,7 +61,7 @@ const LeftPanel = () => {
 
       <div className="mt-auto pt-3 border-t border-border/50">
         <p className="text-[10px] text-muted-foreground font-mono">
-          Last scan: <span className="text-primary">14:32 UTC</span>
+          Last scan: <span className="text-primary">{data?.summary.last_scan ?? "-"}</span>
         </p>
       </div>
     </div>

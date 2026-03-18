@@ -2,36 +2,8 @@ import { useEffect, useRef } from "react";
 import { MapContainer, TileLayer, CircleMarker, Polyline, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-
-// Mock plastic cluster data
-const plasticClusters = [
-  { id: 1, lat: 15.42, lng: 88.77, density: 0.9, size: 450, label: "Cluster Alpha" },
-  { id: 2, lat: 14.85, lng: 87.32, density: 0.7, size: 280, label: "Cluster Beta" },
-  { id: 3, lat: 16.10, lng: 89.50, density: 0.5, size: 150, label: "Cluster Gamma" },
-  { id: 4, lat: 13.50, lng: 86.80, density: 0.3, size: 90, label: "Cluster Delta" },
-  { id: 5, lat: 17.20, lng: 90.10, density: 0.6, size: 200, label: "Cluster Epsilon" },
-  { id: 6, lat: 12.80, lng: 85.50, density: 0.4, size: 120, label: "Cluster Zeta" },
-  { id: 7, lat: 14.20, lng: 89.90, density: 0.8, size: 380, label: "Cluster Eta" },
-  { id: 8, lat: 16.80, lng: 87.80, density: 0.35, size: 100, label: "Cluster Theta" },
-];
-
-// Heatmap-like zones (larger circles with low opacity)
-const heatZones = [
-  { lat: 15.0, lng: 88.0, radius: 80000, color: "rgba(239, 68, 68, 0.15)" },
-  { lat: 14.5, lng: 87.0, radius: 60000, color: "rgba(250, 204, 21, 0.12)" },
-  { lat: 16.5, lng: 89.5, radius: 70000, color: "rgba(250, 204, 21, 0.10)" },
-  { lat: 13.0, lng: 86.0, radius: 50000, color: "rgba(59, 130, 246, 0.12)" },
-];
-
-// Trajectory line (curved path)
-const trajectoryPoints: [number, number][] = [
-  [15.42, 88.77],
-  [15.44, 88.79],
-  [15.46, 88.80],
-  [15.47, 88.81],
-  [15.48, 88.82],
-  [15.49, 88.83],
-];
+import { useDatasetDashboard } from "@/hooks/useDatasetDashboard";
+import type { DatasetCluster } from "@/lib/api";
 
 function getDensityColor(density: number): string {
   if (density > 0.7) return "#EF4444";
@@ -40,7 +12,7 @@ function getDensityColor(density: number): string {
 }
 
 // Custom pulsing markers via DOM
-const PulsingMarkers = () => {
+const PulsingMarkers = ({ clusters }: { clusters: DatasetCluster[] }) => {
   const map = useMap();
   const markersRef = useRef<L.Marker[]>([]);
 
@@ -48,7 +20,7 @@ const PulsingMarkers = () => {
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
-    plasticClusters.forEach((cluster) => {
+    clusters.forEach((cluster) => {
       const color = getDensityColor(cluster.density);
       const icon = L.divIcon({
         className: "pulse-marker",
@@ -85,7 +57,7 @@ const PulsingMarkers = () => {
           ">
             <strong style="color: #22D3EE;">${cluster.label}</strong><br/>
             <span style="font-family: Space Mono, monospace; font-size: 10px; color: #94A3B8;">
-              Density: ${(cluster.density * 100).toFixed(0)}% · ${cluster.size} tons
+              Density: ${(cluster.density * 100).toFixed(0)}% · ${cluster.size_tons} tons
             </span>
           </div>`,
           { direction: "top", offset: [0, -10], className: "custom-tooltip" }
@@ -97,15 +69,38 @@ const PulsingMarkers = () => {
     return () => {
       markersRef.current.forEach((m) => m.remove());
     };
-  }, [map]);
+  }, [map, clusters]);
 
   return null;
 };
 
 const OceanMap = () => {
+  const { data, isLoading, isError, error } = useDatasetDashboard();
+
+  if (isLoading) {
+    return (
+      <div className="h-full w-full rounded-xl border border-border/40 bg-secondary/20 flex items-center justify-center">
+        <p className="text-sm font-mono text-muted-foreground">Loading MARIDA dataset...</p>
+      </div>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="h-full w-full rounded-xl border border-destructive/40 bg-destructive/10 flex items-center justify-center px-4">
+        <p className="text-sm font-mono text-destructive text-center">
+          Dataset load failed{error instanceof Error ? `: ${error.message}` : "."}
+        </p>
+      </div>
+    );
+  }
+
+  const clusters = data.clusters;
+  const center: [number, number] = [data.summary.center_lat, data.summary.center_lng];
+
   return (
     <MapContainer
-      center={[14.5, 88.0]}
+      center={center}
       zoom={6}
       className="h-full w-full rounded-xl"
       zoomControl={true}
@@ -117,13 +112,13 @@ const OceanMap = () => {
       />
 
       {/* Heatmap zones */}
-      {heatZones.map((zone, i) => (
+      {clusters.slice(0, 30).map((cluster) => (
         <CircleMarker
-          key={`zone-${i}`}
-          center={[zone.lat, zone.lng]}
-          radius={zone.radius / 2000}
+          key={`zone-${cluster.id}-${cluster.lat}-${cluster.lng}`}
+          center={[cluster.lat, cluster.lng]}
+          radius={cluster.density * 22 + 10}
           pathOptions={{
-            fillColor: zone.color,
+            fillColor: getDensityColor(cluster.density),
             fillOpacity: 0.4,
             stroke: false,
           }}
@@ -131,7 +126,7 @@ const OceanMap = () => {
       ))}
 
       {/* Cluster circles with tooltips (backup for non-JS tooltip) */}
-      {plasticClusters.map((cluster) => (
+      {clusters.map((cluster) => (
         <CircleMarker
           key={cluster.id}
           center={[cluster.lat, cluster.lng]}
@@ -145,23 +140,25 @@ const OceanMap = () => {
           }}
         >
           <Tooltip>
-            <span className="font-mono text-xs">{cluster.label}: {cluster.size} tons</span>
+            <span className="font-mono text-xs">{cluster.label}: {cluster.size_tons} tons</span>
           </Tooltip>
         </CircleMarker>
       ))}
 
       {/* Trajectory line */}
-      <Polyline
-        positions={trajectoryPoints}
-        pathOptions={{
-          color: "#22D3EE",
-          weight: 2,
-          opacity: 0.7,
-          dashArray: "8 6",
-        }}
-      />
+      {data?.trajectory?.length ? (
+        <Polyline
+          positions={data.trajectory}
+          pathOptions={{
+            color: "#22D3EE",
+            weight: 2,
+            opacity: 0.7,
+            dashArray: "8 6",
+          }}
+        />
+      ) : null}
 
-      <PulsingMarkers />
+      <PulsingMarkers clusters={clusters} />
     </MapContainer>
   );
 };

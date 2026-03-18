@@ -3,11 +3,11 @@ from __future__ import annotations
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from data.marida_service import MaridaDatasetError, load_marida_summary
 from data.ocean_current_service import OceanCurrentServiceError, fetch_ocean_current
 from data.wind_service import WindServiceError, fetch_wind
-from detection.yolo_detector import detect_plastic_clusters
 from prediction.movement_model import predict_location_after_minutes
-from utils.schemas import AnalyzeRequest, AnalyzeResponse
+from utils.schemas import AnalyzeRequest, AnalyzeResponse, DatasetDashboardResponse
 
 app = FastAPI(title="Ocean Plastic Monitoring API", version="1.0.0")
 
@@ -25,8 +25,20 @@ def health() -> dict:
     return {"status": "ok"}
 
 
+@app.get("/dataset/dashboard", response_model=DatasetDashboardResponse)
+def dataset_dashboard():
+    try:
+        return load_marida_summary()
+    except MaridaDatasetError as exc:
+        raise HTTPException(status_code=500, detail=f"Dataset loading error: {exc}") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Unexpected dataset error: {exc}") from exc
+
+
 @app.post("/analyze", response_model=AnalyzeResponse)
 def analyze(payload: AnalyzeRequest):
+    from detection.yolo_detector import detect_plastic_clusters
+
     try:
         detections = detect_plastic_clusters(payload.image_base64)
     except Exception as exc:

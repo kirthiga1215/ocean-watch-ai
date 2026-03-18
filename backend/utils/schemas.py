@@ -28,3 +28,30 @@ class AnalyzeResponse(BaseModel):
     wind: dict
     current: dict
     detections: list[Detection]
+
+
+class DatasetCluster(BaseModel):
+    id: int
+    lat: float
+    lng: float
+    density: float
+    size_tons: float
+    label: str
+    confidence: float
+    report: int
+
+
+class DatasetSummary(BaseModel):
+    cluster_count: int
+    density_level: str
+    last_scan: str
+    center_lat: float
+    center_lng: float
+    total_area_km2: float
+
+
+class DatasetDashboardResponse(BaseModel):
+    dataset: str
+    summary: DatasetSummary
+    clusters: list[DatasetCluster]
+    trajectory: list[list[float]]
